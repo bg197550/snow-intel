@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Snow Intel">
+<title>Park City Snow Intel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: linear-gradient(165deg, #0a1628 0%, #0d1f3c 30%, #112240 60%, #0a192f 100%);
+    color: #fff; min-height: 100vh; overflow-x: hidden;
+  }
+  .mono { font-family: 'Space Mono', monospace; }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 16px; }
+
+  /* Header */
+  .header { padding: 24px 0 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .header-row { display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .sub { font-size: 11px; color: rgba(255,255,255,0.35); font-family: 'Space Mono', monospace; letter-spacing: 0.05em; }
+
+  /* Current conditions */
+  .current { display: flex; align-items: center; gap: 20px; padding: 12px 16px; margin-top: 12px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; }
+  .current .temp { font-size: 24px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .current .label { font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; }
+  .divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; padding: 12px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tab { padding: 10px 16px; border: none; background: transparent; color: rgba(255,255,255,0.5); cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 400; border-radius: 8px; white-space: nowrap; transition: all 0.2s; }
+  .tab.active { background: rgba(255,255,255,0.12); color: #fff; font-weight: 600; }
+  .tab-refresh { margin-left: auto; font-size: 11px !important; }
+
+  /* Location buttons */
+  .loc-bar { display: flex; gap: 6px; padding: 8px 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .loc-btn { padding: 8px 14px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.55); cursor: pointer; font-size: 12px; font-family: 'DM Sans', sans-serif; border-radius: 20px; white-space: nowrap; transition: all 0.2s; }
+  .loc-btn.active { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; }
+
+  /* Card */
+  .card { padding: 12px 16px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+
+  /* Day row */
+  .day-row { display: grid; grid-template-columns: 60px 36px 1fr 70px 80px; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; border: 1px solid transparent; }
+  .day-row.today { background: rgba(79,195,247,0.06); border-color: rgba(79,195,247,0.15); }
+  .day-row.snowy { background: rgba(255,255,255,0.03); }
+  .day-name { font-size: 13px; font-weight: 500; }
+  .day-name.today { font-weight: 700; color: #4FC3F7; }
+  .day-date { font-size: 10px; color: rgba(255,255,255,0.35); }
+  .day-emoji { font-size: 22px; }
+  .snow-val { font-size: 15px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .snow-val.zero { color: rgba(255,255,255,0.25); }
+  .snow-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .precip { font-size: 12px; font-family: 'Space Mono', monospace; text-align: right; color: rgba(255,255,255,0.5); }
+  .temps { text-align: right; }
+  .temps .hi { font-size: 14px; font-weight: 600; }
+  .temps .lo { font-size: 12px; color: rgba(255,255,255,0.35); margin-left: 4px; }
+
+  /* Snow bar */
+  .snow-bar { width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .snow-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+  /* Model row */
+  .model-row { display: grid; grid-template-columns: 90px 1fr 50px; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .model-name { font-size: 11px; font-weight: 500; }
+
+  /* Summary row */
+  .summary-row { display: grid; grid-template-columns: 130px 1fr 60px; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .summary-row .name { font-size: 12px; font-weight: 500; }
+  .summary-row .elev { font-size: 10px; color: rgba(255,255,255,0.3); }
+  .summary-row .total { font-size: 14px; font-weight: 700; font-family: 'Space Mono', monospace; text-align: right; }
+
+  /* Loading */
+  .loading { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 50px 0; }
+  .loading-dots { display: flex; gap: 6px; }
+  .loading-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); animation: pulse 1.2s ease-in-out infinite; }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+  .loading-text { font-size: 12px; color: rgba(255,255,255,0.35); font-family: 'Space Mono', monospace; }
+
+  .error { text-align: center; padding: 40px; }
+  .error-msg { color: #FF8A65; margin-bottom: 12px; }
+  .retry-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; font-size: 13px; }
+
+  .section-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .model-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 0 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-label { font-size: 11px; color: rgba(255,255,255,0.6); }
+
+  .model-day { padding: 12px 16px; border-radius: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .model-day.has-snow { background: rgba(79,195,247,0.04); }
+
+  footer { padding: 24px 0 32px; margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); text-align: center; }
+  footer p { font-size: 10px; color: rgba(255,255,255,0.2); font-family: 'Space Mono', monospace; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .radar-frame { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+  .radar-links { margin-top: 12px; display: flex; gap: 8px; }
+  .radar-link { padding: 8px 14px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); font-size: 12px; text-decoration: none; }
+
+  .glow { position: fixed; top: -200px; right: -200px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(79,195,247,0.06) 0%, transparent 70%); pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="container">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-row">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4FC3F7" stroke-width="1.5" stroke-linecap="round"><path d="M8 21l4.5-9L17 21"/><path d="M2 21l6-10.5L13.5 21"/><path d="M14 21l4-7 4 7"/></svg>
+      <div>
+        <h1>Park City Snow Intel</h1>
+        <p class="sub">DEER VALLEY · ALTA · WASATCH</p>
+      </div>
+    </div>
+    <div class="current" id="currentBar" style="display:none">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="curEmoji" style="font-size:28px"></span>
+        <div>
+          <div class="temp" id="curTemp"></div>
+          <div class="label">At your house</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Wind</div><div style="font-size:14px;font-weight:600" id="curWind"></div></div>
+      <div class="divider"></div>
+      <div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Snow Depth</div><div style="font-size:14px;font-weight:600" id="curSnowDepth"></div></div>
+      <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,0.25)" class="mono" id="updatedTime"></div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="shortterm">7-Day Forecast</button>
+    <button class="tab" data-tab="models">Model Comparison</button>
+    <button class="tab" data-tab="radar">📡 Radar</button>
+    <button class="tab tab-refresh" id="refreshBtn">↻ Refresh</button>
+  </nav>
+
+  <!-- SHORT TERM -->
+  <div class="tab-content active" id="shortterm">
+    <div class="loc-bar" id="locBar"></div>
+    <div class="card" id="locInfo" style="margin-bottom:16px"></div>
+    <div id="forecastContent">
+      <div class="loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><div class="loading-text">Fetching forecasts...</div></div>
+    </div>
+  </div>
+
+  <!-- MODELS -->
+  <div class="tab-content" id="models">
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600">Long-Range Model Comparison</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Snowfall at DV Summit (9,570 ft) · Up to 16 days</div>
+    </div>
+    <div class="model-legend" id="modelLegend"></div>
+    <div id="modelContent">
+      <div class="loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><div class="loading-text">Loading models...</div></div>
+    </div>
+  </div>
+
+  <!-- RADAR -->
+  <div class="tab-content" id="radar">
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600">Live Radar — Wasatch Range</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">Centered on Park City / Deer Valley</div>
+    </div>
+    <div class="radar-frame">
+      <iframe src="https://www.rainviewer.com/map.html?loc=40.63,-111.50,9&oFa=1&oC=1&oU=1&oCS=1&oF=0&oAP=1&c=1&o=83&lm=1&layer=radar&sm=1&sn=1&hu=false" width="100%" height="450" frameborder="0" style="display:block" title="Radar"></iframe>
+    </div>
+    <div class="radar-links">
+      <a class="radar-link" href="https://radar.weather.gov" target="_blank">NWS Radar ↗</a>
+      <a class="radar-link" href="https://opensnow.com/location/parkcity" target="_blank">OpenSnow ↗</a>
+    </div>
+  </div>
+
+  <footer><p>Data: Open-Meteo (GFS, ECMWF, AIFS, GraphCast) · Radar: RainViewer · Personal use</p></footer>
+</div>
+
+<script>
+const LOCATIONS = [
+  { id:"house", name:"My House", subtitle:"1466 Meadow Loop", lat:40.6380, lon:-111.4780, elevation:"6,900 ft" },
+  { id:"dv_base", name:"DV Base", subtitle:"Snow Park Lodge", lat:40.6250, lon:-111.4780, elevation:"6,570 ft" },
+  { id:"dv_mid", name:"DV Mid-Mountain", subtitle:"Silver Lake", lat:40.6180, lon:-111.4850, elevation:"8,100 ft" },
+  { id:"dv_top", name:"DV Summit", subtitle:"Empire Peak", lat:40.6100, lon:-111.4920, elevation:"9,570 ft" },
+  { id:"alta_top", name:"Alta Summit", subtitle:"Mt. Baldy", lat:40.5797, lon:-111.6383, elevation:"11,068 ft" },
+];
+
+const MODELS_CFG = [
+  { id:"gfs_seamless", name:"GFS", color:"#4FC3F7", desc:"NOAA Global", endpoint:"gfs", days:16 },
+  { id:"ecmwf_ifs025", name:"ECMWF", color:"#FF8A65", desc:"European Model", endpoint:"ecmwf", days:10 },
+  { id:"ecmwf_aifs025", name:"AIFS", color:"#CE93D8", desc:"AI Model", endpoint:"ecmwf", days:10 },
+  { id:"gfs_graphcast025", name:"GraphCast", color:"#81C784", desc:"DeepMind AI", endpoint:"gfs", days:10 },
+];
+
+let shortTermData = {};
+let modelDataStore = {};
+let selectedLoc = LOCATIONS[0];
+
+// Utility
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDate(s) {
+  const d = new Date(s+"T12:00:00");
+  return { day: DAYS[d.getDay()], date: MONTHS[d.getMonth()]+" "+d.getDate() };
+}
+
+function weatherEmoji(code) {
+  if (code==null) return "❓";
+  if (code<=1) return "☀️"; if (code<=3) return "⛅"; if (code<=48) return "☁️";
+  if (code<=55) return "🌧️"; if (code<=57) return "🌨️"; if (code<=65) return "🌧️";
+  if (code<=67) return "🌨️"; if (code<=75) return "❄️"; if (code===77) return "🌨️";
+  if (code<=82) return "🌧️"; if (code<=86) return "❄️"; return "⛈️";
+}
+
+function snowTag(inches) {
+  if (inches>=6) return {label:"DUMP DAY",color:"#00E5FF"};
+  if (inches>=3) return {label:"SOLID",color:"#69F0AE"};
+  if (inches>=1) return {label:"DUSTING",color:"#FFD54F"};
+  if (inches>0) return {label:"TRACE",color:"#90A4AE"};
+  return {label:"",color:"transparent"};
+}
+
+function snowBar(value, max, color) {
+  const pct = max > 0 ? Math.min((value/max)*100, 100) : 0;
+  return `<div class="snow-bar"><div class="snow-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${color},${color}cc)"></div></div>`;
+}
+
+// Tab switching
+document.querySelectorAll('.tab[data-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'models' && Object.keys(modelDataStore).length === 0) fetchModels();
+  });
+});
+
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  shortTermData = {};
+  modelDataStore = {};
+  fetchShortTerm();
+});
+
+// Build location bar
+function buildLocBar() {
+  const bar = document.getElementById('locBar');
+  bar.innerHTML = LOCATIONS.map(l =>
+    `<button class="loc-btn ${l.id===selectedLoc.id?'active':''}" data-loc="${l.id}">${l.name}</button>`
+  ).join('');
+  bar.querySelectorAll('.loc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedLoc = LOCATIONS.find(l => l.id === btn.dataset.loc);
+      buildLocBar();
+      renderForecast();
+    });
+  });
+}
+
+function updateLocInfo() {
+  document.getElementById('locInfo').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:16px;font-weight:600">${selectedLoc.name}</div><div style="font-size:12px;color:rgba(255,255,255,0.4)">${selectedLoc.subtitle}</div></div>
+      <div style="font-size:11px;font-family:'Space Mono',monospace;color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:6px">${selectedLoc.elevation}</div>
+    </div>`;
+}
+
+// Fetch short-term for all locations
+async function fetchShortTerm() {
+  document.getElementById('forecastContent').innerHTML = `<div class="loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><div class="loading-text">Fetching forecasts...</div></div>`;
+
+  try {
+    const promises = LOCATIONS.map(async loc => {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=temperature_2m,snowfall,precipitation,weather_code,wind_speed_10m,snow_depth&daily=snowfall_sum,precipitation_sum,temperature_2m_max,temperature_2m_min,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America/Denver&forecast_days=7`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`API error ${res.status} for ${loc.name}`);
+      return { id: loc.id, data: await res.json() };
+    });
+    const results = await Promise.all(promises);
+    results.forEach(r => { shortTermData[r.id] = r.data; });
+
+    // Current conditions
+    const house = shortTermData["house"];
+    if (house && house.hourly) {
+      const now = new Date();
+      let idx = 0;
+      for (let i = 0; i < house.hourly.time.length; i++) {
+        if (new Date(house.hourly.time[i]) > now) { idx = Math.max(0, i-1); break; }
+      }
+      document.getElementById('curEmoji').textContent = weatherEmoji(house.hourly.weather_code[idx]);
+      document.getElementById('curTemp').textContent = Math.round(house.hourly.temperature_2m[idx]) + "°F";
+      document.getElementById('curWind').textContent = Math.round(house.hourly.wind_speed_10m[idx]) + " mph";
+      const sd = house.hourly.snow_depth ? house.hourly.snow_depth[idx] : null;
+      document.getElementById('curSnowDepth').textContent = sd != null ? sd.toFixed(1) + '"' : "N/A";
+      document.getElementById('updatedTime').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      document.getElementById('currentBar').style.display = 'flex';
+    }
+
+    renderForecast();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('forecastContent').innerHTML = `<div class="error"><div class="error-msg">⚠️ ${e.message}</div><button class="retry-btn" onclick="fetchShortTerm()">Retry</button></div>`;
+  }
+}
+
+function renderForecast() {
+  buildLocBar();
+  updateLocInfo();
+  const data = shortTermData[selectedLoc.id];
+  if (!data || !data.daily) { document.getElementById('forecastContent').innerHTML = '<div class="error">No data</div>'; return; }
+
+  let maxSnow = 6;
+  Object.values(shortTermData).forEach(d => { if(d.daily) d.daily.snowfall_sum.forEach(v => { if(v>maxSnow) maxSnow=v; }); });
+
+  let html = '';
+  data.daily.time.forEach((dateStr, i) => {
+    const {day, date} = fmtDate(dateStr);
+    const snow = data.daily.snowfall_sum[i] || 0;
+    const precip = data.daily.precipitation_sum[i] || 0;
+    const hi = Math.round(data.daily.temperature_2m_max[i]);
+    const lo = Math.round(data.daily.temperature_2m_min[i]);
+    const wc = data.daily.weather_code[i];
+    const st = snowTag(snow);
+    const isToday = i===0;
+
+    html += `<div class="day-row ${isToday?'today':''} ${snow>=1?'snowy':''}">
+      <div><div class="day-name ${isToday?'today':''}">${isToday?'Today':day}</div><div class="day-date">${date}</div></div>
+      <div class="day-emoji">${weatherEmoji(wc)}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4FC3F7" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/><circle cx="12" cy="12" r="1" fill="#4FC3F7"/></svg>
+          <span class="snow-val mono ${snow>0?'':'zero'}">${snow>0?snow.toFixed(1)+'"':'—'}</span>
+          ${st.label?`<span class="snow-tag" style="color:${st.color}">${st.label}</span>`:''}
+        </div>
+        ${snowBar(snow, maxSnow, '#4FC3F7')}
+      </div>
+      <div class="precip">${precip>0?precip.toFixed(2)+'" liq':''}</div>
+      <div class="temps"><span class="hi">${hi}°</span><span class="lo">${lo}°</span></div>
+    </div>`;
+  });
+
+  // Totals
+  html += `<div class="card" style="margin-top:24px"><h3 class="section-title">7-Day Snow Totals</h3>`;
+  const maxTotal = Math.max(...LOCATIONS.map(l => (shortTermData[l.id]?.daily?.snowfall_sum||[]).reduce((a,b)=>a+b,0)), 1);
+  LOCATIONS.forEach(loc => {
+    const total = (shortTermData[loc.id]?.daily?.snowfall_sum||[]).reduce((a,b)=>a+b,0);
+    const clr = loc.id==='alta_top' ? '#CE93D8' : '#4FC3F7';
+    html += `<div class="summary-row">
+      <div><div class="name">${loc.name}</div><div class="elev">${loc.elevation}</div></div>
+      ${snowBar(total, maxTotal, clr)}
+      <div class="total">${total.toFixed(1)}"</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('forecastContent').innerHTML = html;
+}
+
+// Fetch models
+async function fetchModels() {
+  document.getElementById('modelContent').innerHTML = `<div class="loading"><div class="loading-dots"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div><div class="loading-text">Comparing models...</div></div>`;
+
+  // Build legend
+  document.getElementById('modelLegend').innerHTML = MODELS_CFG.map(m =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${m.color}"></div><span class="legend-label">${m.name} <span style="color:rgba(255,255,255,0.25);font-size:9px">(${m.desc})</span></span></div>`
+  ).join('');
+
+  const loc = LOCATIONS[3]; // DV Summit
+  try {
+    const promises = MODELS_CFG.map(async model => {
+      const url = `https://api.open-meteo.com/v1/${model.endpoint}?latitude=${loc.lat}&longitude=${loc.lon}&daily=snowfall_sum,precipitation_sum,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America/Denver&forecast_days=${model.days}&models=${model.id}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return { id: model.id, data: null };
+        return { id: model.id, data: await res.json() };
+      } catch { return { id: model.id, data: null }; }
+    });
+    const results = await Promise.all(promises);
+    results.forEach(r => { if(r.data) modelDataStore[r.id] = r.data; });
+    renderModels();
+  } catch(e) {
+    document.getElementById('modelContent').innerHTML = `<div class="error"><div class="error-msg">⚠️ ${e.message}</div><button class="retry-btn" onclick="fetchModels()">Retry</button></div>`;
+  }
+}
+
+function renderModels() {
+  if (Object.keys(modelDataStore).length === 0) {
+    document.getElementById('modelContent').innerHTML = '<div class="error">No model data available</div>';
+    return;
+  }
+
+  const allDates = new Set();
+  MODELS_CFG.forEach(m => { const d = modelDataStore[m.id]; if(d?.daily?.time) d.daily.time.forEach(t => allDates.add(t)); });
+  const dates = [...allDates].sort();
+
+  let maxMS = 3;
+  dates.forEach(d => {
+    MODELS_CFG.forEach(m => {
+      const data = modelDataStore[m.id];
+      if(!data?.daily?.time) return;
+      const idx = data.daily.time.indexOf(d);
+      if(idx>=0) { const v = data.daily.snowfall_sum[idx]||0; if(v>maxMS) maxMS=v; }
+    });
+  });
+
+  let html = '';
+  dates.forEach((ds, di) => {
+    const {day, date} = fmtDate(ds);
+    const isToday = di===0;
+    const entries = MODELS_CFG.map(m => {
+      const d = modelDataStore[m.id];
+      if(!d?.daily?.time) return null;
+      const idx = d.daily.time.indexOf(ds);
+      if(idx<0) return null;
+      return { snow: d.daily.snowfall_sum[idx]||0, model: m };
+    }).filter(Boolean);
+    const anySnow = entries.some(e => e.snow > 0);
+
+    html += `<div class="model-day ${anySnow?'has-snow':''}">
+      <div style="display:flex;justify-content:space-between;${anySnow?'margin-bottom:8px':''}">
+        <div><div style="font-size:12px;font-weight:${isToday?700:500};color:${isToday?'#4FC3F7':'#fff'}">${isToday?'Today':day}</div><div style="font-size:10px;color:rgba(255,255,255,0.3)">${date}</div></div>
+        ${!anySnow?'<div style="font-size:11px;color:rgba(255,255,255,0.2)">No snow</div>':''}
+      </div>`;
+    if(anySnow) {
+      entries.filter(e=>e.snow>0).forEach(e => {
+        html += `<div class="model-row">
+          <div class="model-name" style="color:${e.model.color}">${e.model.name}</div>
+          ${snowBar(e.snow, maxMS, e.model.color)}
+          <div class="mono" style="font-size:13px;font-weight:700;text-align:right;color:${e.model.color}">${e.snow.toFixed(1)}"</div>
+        </div>`;
+      });
+    }
+    html += '</div>';
+  });
+
+  // Totals
+  html += `<div class="card" style="margin-top:20px"><h3 class="section-title">Total Snow by Model</h3>`;
+  const maxT = Math.max(...MODELS_CFG.map(m => (modelDataStore[m.id]?.daily?.snowfall_sum||[]).reduce((a,b)=>a+b,0)), 1);
+  MODELS_CFG.forEach(m => {
+    const total = (modelDataStore[m.id]?.daily?.snowfall_sum||[]).reduce((a,b)=>a+b,0);
+    html += `<div class="summary-row" style="grid-template-columns:120px 1fr 60px">
+      <div><div class="name" style="color:${m.color}">${m.name}</div><div class="elev">${m.desc}</div></div>
+      ${snowBar(total, maxT, m.color)}
+      <div class="total" style="font-size:15px">${total.toFixed(1)}"</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('modelContent').innerHTML = html;
+}
+
+// Init
+buildLocBar();
+updateLocInfo();
+fetchShortTerm();
+</script>
+</body>
+</html>
